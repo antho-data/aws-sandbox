@@ -1,0 +1,160 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Billing Alerts for AWS Account
+
+Parameters:
+  Email:
+    Type: String
+    Default: dst-student@datascientest.com
+    Description: Your email address to receive alarms per email
+
+  WarningThreshold:
+    Description: The billing amount considered as a warning to start the aws-freeze pipeline
+    Type: String
+    Default: 150
+
+  CriticalThreshold:
+    Description: The maximum billing amount to make the user ReadOnly and trigger the aws-wipe pipeline
+    Type: String
+    Default: 200
+
+Mappings:
+  EstimatedCharges:
+    AlarmRange:     
+      "One" : !Ref WarningThreshold      # It will trigger an alarm if your billing gets higher than $100
+      "Two" : !Ref CriticalThreshold     # It will trigger an alarm if your billing gets higher than $150
+
+Resources:
+  BillingAlertOne:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref BillingAlertTopic
+      AlarmDescription: !Join ["", [Billing Alert for $, !FindInMap [EstimatedCharges, AlarmRange, One]]]
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      EvaluationPeriods: 1
+      MetricName: EstimatedCharges
+      Namespace: AWS/Billing
+      Period: 600
+      TreatMissingData: breaching
+      Statistic: Maximum
+      Threshold: !FindInMap [EstimatedCharges, AlarmRange, One]
+
+  BillingAlertTwo:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmActions:
+        - !Ref BillingAlertTopic
+      AlarmDescription: !Join ["", [Billing Alert for $, !FindInMap [EstimatedCharges, AlarmRange, Two]]]
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: Currency
+          Value: USD
+      EvaluationPeriods: 1
+      MetricName: EstimatedCharges
+      Namespace: AWS/Billing
+      TreatMissingData: breaching
+      Period: 600
+      Statistic: Maximum
+      Threshold: !FindInMap [EstimatedCharges, AlarmRange, Two]
+
+  BillingAlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+
+  LambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+      FunctionName: AwsLambdaMinimalExample
+      Handler: index.handler
+      Runtime: nodejs14.x
+      Role: !GetAtt LambdaFunctionRole.Arn
+      MemorySize: 1024
+      Code:
+        ZipFile: |
+          /**
+           * AWS Lambda function that is  invoked to to start an AWS CodePipeline pipeline eery time a billing alert is triggered.
+           *
+           * Event Flow:
+           * 1. A trigger will be an SNS topic that invoke the Lambda function
+           * 2. The lambda function  executes the specified CodePipeline pipeline using the input pipeline name (aws-freeze or aws-nuke)
+           *
+           * @param event AWS event object containing event data 
+           * @param  context execution context of the function  
+           */
+          exports.handler = function(event, context) {
+            "use strict";
+ 
+            // Retrieve the CodePipeline name
+            //	const pipelineName = event.pipelineName;
+            // AWS SDK
+          	const AWS = require('aws-sdk');
+
+          	//Instantiate CodePipeline
+          	let codepipeline = new AWS.CodePipeline();
+
+          	let params = {
+            //			name: pipelineName
+             	name:	"freeze-Pipeline"
+          	};
+          	codepipeline.startPipelineExecution(params, function(err, data) {
+            	if (err) {
+            		console.log(err, err.stack); // an error occurred
+           	  }
+           	  else { 
+          			console.log(data); // successful response
+          	  }           
+            });
+          }
+          
+  LambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: SandboxLambdaPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            - codepipeline:*
+            - kms:*
+            Resource: "*"
+
+  AlarmSubscriberEmail:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !Ref Email
+      Protocol: email
+      TopicArn: !Ref BillingAlertTopic
+
+  AlarmSubscriberLambda:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint: !GetAtt LambdaFunction.Arn
+      Protocol: lambda
+      TopicArn: !Ref BillingAlertTopic

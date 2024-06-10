@@ -1,0 +1,215 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Template to set up a proactive AWS Config Rule, tagging, and SNS notifications.
+
+Resources:
+
+  ConfigTopic:
+    Type: "AWS::SNS::Topic"
+    Properties:
+      DisplayName: "KMS Compliance Alert"
+      TopicName: "KMSComplianceAlert"
+      Tags:
+        - Key: "management"
+          Value: "lambda"
+
+  SNSEmailSubscription:
+    Type: "AWS::SNS::Subscription"
+    Properties:
+      Protocol: "email"
+      Endpoint: "dst-student@datascientest.com"
+      TopicArn: !Ref ConfigTopic
+
+  DeliveryChannel:
+    Type: "AWS::Config::DeliveryChannel"
+    Properties:
+      Name: "default"
+      S3BucketName: !Ref ConfigBucket
+      SnsTopicARN: !Ref ConfigTopic
+
+  ConfigRecorder:
+    Type: "AWS::Config::ConfigurationRecorder"
+    Properties:
+      Name: "default"
+      RoleARN: !GetAtt "ConfigRole.Arn"
+      RecordingGroup:
+        ResourceTypes:
+          - "AWS::KMS::Key"
+
+  ConfigBucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      Tags:
+        - Key: "management"
+          Value: "student"
+
+  ConfigTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Id: ConfigTopicPolicy
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - config.amazonaws.com
+                - lambda.amazonaws.com
+            Action: SNS:Publish
+            Resource: '*'
+        Topics: [!Ref 'ConfigTopic']
+
+  ConfigRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "config.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns: ['arn:aws:iam::aws:policy/service-role/AWS_ConfigRole']
+      Policies: 
+        - PolicyName: "BucketConfigPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "s3:PutObject"
+                  - "s3:GetBucketAcl"
+                Resource: 
+                  - !Sub "arn:aws:s3:::${ConfigBucket}"
+                  - !Sub "arn:aws:s3:::${ConfigBucket}/*"
+
+  LambdaExecutionRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Policies:
+        - PolicyName: "LambdaKMSConfigPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "logs:CreateLogGroup"
+                  - "logs:CreateLogStream"
+                  - "logs:PutLogEvents"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "config:PutEvaluations"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "kms:DescribeKey"
+                  - "kms:GetKeyPolicy"
+                Resource: "*"
+              - Effect: "Allow"
+                Action:
+                  - "sns:Publish"
+                Resource: !Ref ConfigTopic
+
+  LambdaFunction:
+    Type: "AWS::Lambda::Function"
+    Properties:
+      Handler: "index.lambda_handler"
+      Role: !GetAtt "LambdaExecutionRole.Arn"
+      FunctionName: "KMSKeyPolicyChecker"
+      Environment:
+        Variables:
+          SNS_TOPIC_ARN: !Ref ConfigTopic
+          ACCOUNT_ID: !Ref "AWS::AccountId"
+      Code:
+        ZipFile: |
+          import boto3
+          import json
+          import os
+
+          sns_topic_arn = os.environ['SNS_TOPIC_ARN']
+          account_id = os.environ['ACCOUNT_ID']
+
+          def evaluate_compliance(configuration_item, rule_parameters):
+              kms_policy = json.loads(configuration_item["supplementaryConfiguration"]["Policy"])
+              for statement in kms_policy['Statement']:
+                  if "Principal" in statement and statement['Principal'] == {"AWS": "arn:aws:iam::" + account_id + ":root"}:
+                      return "COMPLIANT"
+              return "NON_COMPLIANT"
+
+          def notify_non_compliance(configuration_item):
+              sns_client = boto3.client('sns')
+              message = f'KMS compliance alert for account {account_id} - Resource {configuration_item["resourceId"]} is NON_COMPLIANT'
+              sns_client.publish(TopicArn=sns_topic_arn, Message=message)
+
+          def lambda_handler(event, context):
+              invoking_event = json.loads(event['invokingEvent'])
+              configuration_item = invoking_event['configurationItem']
+              rule_parameters = {}
+              if 'ruleParameters' in event:
+                  rule_parameters = json.loads(event['ruleParameters'])
+
+              evaluation = evaluate_compliance(configuration_item, rule_parameters)
+              if evaluation == "NON_COMPLIANT":
+                  notify_non_compliance(configuration_item)
+
+              config = boto3.client('config')
+
+              response = config.put_evaluations(
+                  Evaluations=[
+                      {
+                          'ComplianceResourceType': invoking_event['configurationItem']['resourceType'],
+                          'ComplianceResourceId': invoking_event['configurationItem']['resourceId'],
+                          'ComplianceType': evaluation,
+                          'OrderingTimestamp': invoking_event['configurationItem']['configurationItemCaptureTime']
+                      },
+                  ],
+                  ResultToken=event['resultToken']
+              )
+      Runtime: "python3.9"
+      Timeout: "10"
+      Tags:
+        - Key: "management"
+          Value: "student"
+
+  ConfigLambdaInvokePermission:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !Ref LambdaFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: 'config.amazonaws.com'
+
+  ConfigRule:
+    Type: "AWS::Config::ConfigRule"
+    Properties:
+      Source:
+        Owner: "CUSTOM_LAMBDA"
+        SourceIdentifier: !GetAtt "LambdaFunction.Arn" 
+        SourceDetails:
+          - EventSource: aws.config
+            MessageType: ConfigurationItemChangeNotification
+      Description: "Check KMS Key Policies for correct principal"
+      Scope:
+        ComplianceResourceTypes:
+          - "AWS::KMS::Key"
+      InputParameters: {}
+    DependsOn: [ConfigLambdaInvokePermission, ConfigRecorder]
+
+Outputs:
+  LambdaFunctionArn:
+    Description: "The ARN of the Lambda function"
+    Value: !GetAtt "LambdaFunction.Arn"
+
+  ConfigTopicArn:
+    Description: "The ARN of the SNS topic"
+    Value: !Ref ConfigTopic

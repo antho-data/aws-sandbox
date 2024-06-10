@@ -1,0 +1,418 @@
+AWSTemplateFormatVersion: '2010-09-09'
+
+Description: This template provisions a single IAM User and an IAM User Access Key
+  
+Metadata:
+  Purpose:
+    Description: "This template is used to create a stack that implements a single IAM User with an accompanying IAM Access Key.  
+                  The user can be associated with an IAM Group and/or one of several Managed Policies offered by AWS.  Each managed 
+                  policy maps to a traditional user job function/role. The stack exports both the user name and ARN, and outputs
+                  the access key id and secret on successful deployment."
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "IAM User Account Parameters"
+        Parameters:
+          - Group
+          - ManagedPolicy
+          - Password
+          - PasswordResetRequired
+          - Path
+          - UserName
+    ParameterLabels:
+      Group:
+        default: IAM Group
+      ManagedPolicy:
+        default: Managed Policy
+      Password:
+        default: User Password
+      PasswordResetRequired:
+        default: Password Reset required
+      Path:
+        default: Path
+      UserName: 
+        default: User Name
+
+
+Parameters:
+
+  Group:
+    Type: String
+    Description: Would you like to add this user to an IAM Group, or list of IAM Groups?
+    ConstraintDescription: Must be a comma separated list of IAM Group names (group1,group2,group3)
+    Default: "None"
+
+  ManagedPolicy:
+    Type: String
+    Description: Would you like to associate a predefined Managed Policy with the user?
+    AllowedValues:
+    - Administrator
+    - Billing
+    - DatabaseAdministrator
+    - DataScientist
+    - DeveloperPowerUser
+    - NetworkAdministrator
+    - SecurityAuditor
+    - SupportUser
+    - SystemAdministrator
+    - View-Only
+    - None
+    Default: Administrator
+
+  Password:
+    Type: String
+    Description: Please enter a password 
+    ConstraintDescription: Password must be between 8 and 32 characters, start with lowercase or uppercase letter, and can be alphanumeric with the following special characters !@#$%& 
+    NoEcho: true
+
+  PasswordResetRequired:
+    Type: String
+    Description: Do you want to require users to create a new password on first login?
+    ConstraintDescription: Must be a boolean value of true or false
+    Default: "false"
+    AllowedValues: 
+    - "true"
+    - "false"
+
+  Path:
+    Type: String
+    Description: What IAM Path would you like to associate with the User?
+    AllowedPattern: (^\/$)|(^\/.*\/$)
+    Default: "/"
+
+  UserName:
+    Type: String
+    Description: Would you like to define a UserName for the IAM User?
+    AllowedPattern: ^[\w+=,.@-]{1,64}$
+    ConstraintDescription: This parameter allows a string of characters consisting of upper and lowercase alphanumeric characters with no spaces, and the following special characters [\w+=,.@-]+
+    Default: "None"
+
+  SESFromEmail:
+    Description: Email to be used for sending the AWS SES notification once the IAM user is created
+    Type: String
+    AllowedPattern: '[^@]+@[^@]+\.[^@]+'
+    Default: "dst-student@datascientest.com"
+
+  SESToEmail:
+    Description: Email to be used for sending the AWS SES notification once the IAM user is created
+    Type: String
+    AllowedPattern: '[^@]+@[^@]+\.[^@]+'
+    Default: "dst-student@gmail.com"
+    
+  SESPassword:
+    Type: String
+    Description: Please enter a password 
+    ConstraintDescription: Password must be between 8 and 32 characters, with the following special characters !@#$%& 
+    NoEcho: true
+
+Mappings:
+
+  ManagedPolicies:
+    Administrator: 
+      ARN: arn:aws:iam::aws:policy/AdministratorAccess
+      GroupRole: AdministratorAccess
+    Billing: 
+      ARN: arn:aws:iam::aws:policy/job-function/Billing
+      GroupRole: Billing
+    DatabaseAdministrator: 
+      ARN: arn:aws:iam::aws:policy/job-function/DatabaseAdministrator
+      GroupRole: DatabaseAdministrator
+    DataScientist: 
+      ARN: arn:aws:iam::aws:policy/job-function/DataScientist
+      GroupRole: DataScientist
+    DeveloperPowerUser: 
+      ARN: arn:aws:iam::aws:policy/PowerUserAccess
+      GroupRole: PowerUserAccess
+    NetworkAdministrator: 
+      ARN: arn:aws:iam::aws:policy/job-function/NetworkAdministrator
+      GroupRole: NetworkAdministrator
+    SecurityAuditor: 
+      ARN: arn:aws:iam::aws:policy/SecurityAudit
+      GroupRole: SecurityAudit
+    SupportUser: 
+      ARN: arn:aws:iam::aws:policy/job-function/SupportUser
+      GroupRole: SupportUser
+    SystemAdministrator: 
+      ARN: arn:aws:iam::aws:policy/job-function/SystemAdministrator
+      GroupRole: SystemAdministrator
+    View-Only: 
+      ARN: arn:aws:iam::aws:policy/job-function/ViewOnlyAccess
+      GroupRole: ViewOnlyAccess
+    None: 
+      ARN: arn:aws:iam::aws:policy/NoAccess
+      GroupRole: NoAccess
+
+
+Conditions:
+
+  hasManagedPolicy:
+    !Not [!Equals [!Ref ManagedPolicy, "None"]]
+
+  hasUserName: 
+    !Not [!Equals [!Ref UserName, "None"]]
+
+  hasGroup:
+    !Not [!Equals [!Ref Group, "None"]]
+
+
+Resources:
+
+  User:
+    Type: AWS::IAM::User
+    Properties:
+      Groups: 
+        - !If [hasGroup, !Ref Group, !Ref "AWS::NoValue"]
+      LoginProfile:
+        Password: !Ref Password
+        PasswordResetRequired: !Ref PasswordResetRequired
+      ManagedPolicyArns:
+        - !If [hasManagedPolicy, !FindInMap [ManagedPolicies, !Ref ManagedPolicy, ARN], !Ref "AWS::NoValue"]
+      Path: !Ref Path
+      UserName: !If [hasUserName, !Ref UserName, !Ref "AWS::NoValue"]
+
+  AccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties: 
+      UserName: !Ref User
+
+  SESConfigSet:
+    Type: 'AWS::SES::ConfigurationSet'
+    Properties:
+      Name: CustomConfigSet
+
+  S3GithubTemplatesName:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+      BucketName: !Join
+        - "-"
+        - - "cfn-datascientest-sandbox-templates-repo"
+          - !Select
+            - 0
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - "/"
+                  - !Ref "AWS::StackId"
+  
+  LambdaFunctionUserNotification:
+    Type: AWS::Lambda::Function
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+      FunctionName: caller
+      Handler: index.lambda_handler
+      Role: !GetAtt 'LambdaRole.Arn'
+      Environment:
+        Variables:
+          SES_FROM_EMAIL:
+            Ref: SESFromEmail
+          SES_TO_EMAIL:
+            Ref: SESToEmail
+          SES_PASS:
+            Ref: SESPassword
+          SES_CONFIG_SET_NAME:
+            Ref: SESConfigSet
+          SES_User_NAME:
+            Ref: User
+          SES_User_Password:
+            Ref: Password
+          SES_User_AccessKey:
+            Ref: AccessKey
+          SES_User_SecretKey: !GetAtt AccessKey.SecretAccessKey
+      Runtime: python3.9
+      Timeout: 60
+      Code:
+        ZipFile: |
+              import os
+              import boto3
+              import smtplib
+              from email.mime.multipart import MIMEMultipart
+              from email.mime.text import MIMEText
+
+              from_email = os.environ["SES_FROM_EMAIL"]
+              to_email = os.environ["SES_TO_EMAIL"]
+              pass_email = os.environ["SES_PASS"]
+              config_set_name = os.environ["SES_CONFIG_SET_NAME"]
+              user_name = os.environ["SES_User_NAME"]
+              user_pass = os.environ["SES_User_Password"]
+              user_access_key = os.environ["SES_User_AccessKey"]
+              user_secret_key = os.environ["SES_User_SecretKey"]
+
+              def lambda_handler(event, context):
+                  user_aws_account_id = boto3.client("sts").get_caller_identity()["Account"]
+
+                  body_html = f"""<html>
+                      <head></head>
+                      <body>
+                        <h2>Your Datascientest AWS Sandbox is live!</h2>
+                        <br/>
+                        <p>You have been granted access to an aws sandbox environment.
+                        You could login to <a href="https://aws.amazon.com/" target="_blank">Amazon Web Services</a> using the following AWS account id: <b> {user_aws_account_id} </b> </p> 
+                        <p> For console (web browser) access, use the following credentials:</p>
+                          - <b>username </b>: {user_name}
+                          - <b>password </b>: {user_pass}
+                        <p>For programatic access, please read the <a href="https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html" target="_blank">documentation</a> and use the following access key and secret key within your aws cli:</p>
+                          - <b>AccessKey </b>: {user_access_key}
+                          - <b>SecretKey </b>: {user_secret_key}
+                        </body>
+                      </html>
+                                  """
+
+                  msg = MIMEMultipart('alternative')
+                  msg['Subject'] = 'Your Datascientest AWS Sandbox is ready'
+                  msg['From'] = from_email
+                  msg['To'] = to_email
+
+                  part1 = MIMEText(body_html, 'html') 
+                  msg.attach(part1)
+
+                  try:
+                      server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+                      server.ehlo()
+                      server.login(from_email, pass_email)
+                      server.sendmail(from_email, to_email, msg.as_string())
+                      server.close()
+                  
+                      print('Email sent!')
+                  except:
+                      print('Something went wrong...')
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+      RoleName: DatascientestUserCreationRole
+      Description: An execution role for a Lambda function launched by CloudFormation
+      ManagedPolicyArns:
+        - !Ref LambdaPolicy
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action:
+          - 'sts:AssumeRole'
+        
+  LambdaPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: DatascientestUserCreationPolicy
+      Description: Managed policy for a Lambda function launched by CloudFormation
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action:
+              - 'ses:*'
+              - 's3:*'
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - 'logs:CreateLogGroup'
+              - 'logs:CreateLogStream'
+              - 'logs:PutLogEvents'
+            Resource: '*'
+                  
+  # Define the consumer Lambda function for filling S3 sandbox and invoking the user lambda defined above 
+  SandboxInitConsumerFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Tags: 
+        - Key: "management"
+          Value: "student" 
+      FunctionName: sandboxTrigger
+      Handler: index.lambda_handler
+      Role: !GetAtt 'LambdaRole.Arn'
+      MemorySize: 2048
+      Runtime: python3.9
+      Timeout: 100
+      Environment:
+        Variables:
+          S3_GITHUB_TEMPLATES_NAME:
+            Ref: S3GithubTemplatesName
+      Code:
+        ZipFile: |
+                import os
+                import boto3
+                import urllib.request
+                import tempfile
+
+                s3 = boto3.client('s3')
+
+                def lambda_handler(event, context):
+                    bucket_name = os.environ["S3_GITHUB_TEMPLATES_NAME"]
+                    print("Download and upload files from URLs")
+                    temppath = tempfile.gettempdir()
+
+                    # Download and upload files from URLs
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-alerting-service.yaml', "aws-alerting-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-billing-alert.yml', "aws-billing-alert.yml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-freeze-service.yaml', "aws-freeze-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-wipe-service.yaml', "aws-wipe-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-user-service.yaml', "aws-user-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-config-rule.yaml', "aws-config-rule.yaml")
+
+                    # Download and upload specific files from the GitHub 'code' directory
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/code/freeze/index_freeze.py', 'code/freeze/index_freeze.py')
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/code/nuke/index_nuke.py', 'code/nuke/index_nuke.py')
+
+                def update_S3_name(filename):
+                    """
+                    Update the content of a file with the S3 bucket name.
+                    
+                    :param filename: Name of the file to update
+                    """
+                    temppath = tempfile.gettempdir()
+                    bucket_name = os.environ["S3_GITHUB_TEMPLATES_NAME"] + '.s3.amazonaws.com'
+                    with open(temppath + "/" + filename, "rt") as fin:
+                        data = fin.read()
+                        data = data.replace('cf-template-datascientest-sandboxes.s3.amazonaws.com', bucket_name)
+                    with open(temppath + "/" + filename, "wt") as fin:
+                        fin.write(data)
+
+                def upload_2_s3(file_url, name):
+                    """
+                    Download a file from a URL and upload it to S3.
+                    
+                    :param file_url: URL of the file to download
+                    :param name: Name of the file to use when uploading to S3
+                    """
+                    bucket_name = os.environ["S3_GITHUB_TEMPLATES_NAME"]
+                    # Download and create file in temp path
+                    temppath = tempfile.gettempdir()
+                    urllib.request.urlretrieve(file_url, temppath + '/' + name)
+                    print("# - Process AWS S3 upload")
+                    s3.put_object(Bucket=bucket_name, Key=name, StorageClass='REDUCED_REDUNDANCY', Body=open(temppath + '/' + name, 'rb'))
+
+Outputs:
+
+  UserName: 
+    Description: The UserName associated with the IAM User account
+    Value: !Ref User
+    Export:
+      Name: !Join ["-", [!Ref "AWS::StackName", "user-name"]]
+
+  UserARN:
+    Description: The ARN associated with the IAM User account
+    Value: !GetAtt User.Arn
+    Export:
+      Name: !Join ["-", [!Ref "AWS::StackName", "user-arn"]]
+    
+  AccessKeyId:
+    Description: the Access Key Id 
+    Value: !Ref AccessKey
+    
+  AccessKeySecret:
+    Description: the Access Key Secret
+    Value: !GetAtt AccessKey.SecretAccessKey

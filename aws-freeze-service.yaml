@@ -1,0 +1,401 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Execute a CodePipeline/CodeBuild job to freeeze the billing of resources in a given AWS sandbox following a CW billing alert.
+
+Parameters:
+#  GitUser:
+#    Type: String
+#    Description: Git username
+
+#  GitRepo:
+#    Type: String
+#    Description: Git repository
+
+#  GitBranch:
+#    Type: String
+#    Description: Git branch
+
+  GitToken:
+    Type: String
+    Description: Git OAuthToken
+    NoEcho: true
+  AWSFreezeProfileName:
+    Description: The name of a CLI Profile to setup in AWS CodeBuild
+    Type: String
+    Default: freeze
+
+  NotificationEmailAddress:
+    Description: The email address where email notifications should be sent
+    Type: String
+
+  WhenToExecute:
+    Description: Cron syntax in UTC when the resources will be terminated. #https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html
+    Type: String
+    Default: "cron(0 0 * * ? *)"
+
+  RetentionInDays:
+    Description: Log retention in number of days
+    Type: String
+    Default: '14'
+
+Resources:
+
+#Notifications
+
+  PipelineEvents:
+    Type: "AWS::Events::Rule"
+    Properties:
+      Description: "Trigger notifications based on pipeline statuses"
+      EventPattern:
+        source:
+          - "aws.codepipeline"
+        detail-type:
+          - "CodePipeline Pipeline Execution State Change"
+        detail:
+          state:
+            - "STARTED"
+            - "SUCCEEDED"
+            - "FAILED"
+            - "RESUMED"
+            - "CANCELED"
+            - "SUPERSEDED"
+          pipeline:
+            - !Ref Pipeline
+      State: "ENABLED"
+      Targets:
+        - Arn: !Ref PipelineEventsTopic
+          Id: !Sub "${AWS::StackName}"
+          InputTransformer:
+            InputTemplate: |
+              "The pipeline <pipeline> from account <account> has <state> at <at> in region <region>."
+
+              "Access the pipeline here: https://<region>.console.aws.amazon.com/codesuite/codepipeline/pipelines/<pipeline>/view"
+            InputPathsMap:
+              detail: "$.detail"
+              pipeline: "$.detail.pipeline"
+              state: "$.detail.state"
+              at: "$.time"
+              account: "$.account"
+              region: "$.region"
+
+#CodePipeline Alerts
+  PipelineEventsTopic:
+    Type: 'AWS::SNS::Topic'
+    Properties:
+      DisplayName: !Sub "AWS CodePipeline Events ${AWS::AccountId}"
+      Subscription:
+        - Endpoint: !Ref NotificationEmailAddress
+          Protocol: email
+
+  PipelineEventsTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      PolicyDocument:
+        Id: PipelineEventsTopicPolicy
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - events.amazonaws.com
+          Action: sns:Publish
+          Resource: !Ref PipelineEventsTopic
+      Topics:
+      - !Ref PipelineEventsTopic
+
+#Trigger
+  CronEvent:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Rule for Amazon CloudWatch Events to trigger a build"
+      ScheduleExpression: !Ref WhenToExecute
+      Name: !Join
+      - '-'
+      - - !Ref 'AWS::StackName'
+        - TriggerFreeze
+      State: ENABLED
+      Targets:
+      - Arn: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+        Id: Run
+        RoleArn: !GetAtt EventRole.Arn
+
+#Permissions
+  EventRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: IAM role to allow Amazon CloudWatch Events to trigger AWS CodeBuild build
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - events.amazonaws.com
+          Sid: 1
+      Policies:
+      - PolicyDocument:
+          Statement:
+          - Action:
+            - codepipeline:StartPipelineExecution
+            Effect: Allow
+            Resource: !Sub arn:aws:codepipeline:${AWS::Region}:${AWS::AccountId}:${Pipeline}
+        PolicyName: !Join
+          - '-'
+          - - !Ref 'AWS::StackName'
+            - CloudWatchEventPolicy
+      RoleName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - CloudWatchEventRule
+
+  AwsFreezePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - "*"
+          Effect: Allow
+          Resource: '*'
+      PolicyName: !Join
+        - '-'
+        -  - !Ref 'AWS::StackName'
+           - AwsFreezePolicy
+      Roles:
+      - !Ref 'AwsFreezeRole'
+
+  AwsFreezeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Creating service role in IAM for freeze-sandbox to use when targetting resources for freeze
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt CodeBuildRole.Arn
+      Path: /
+      RoleName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - AwsFreeze
+
+  CodeBuildPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+        - Action:
+          - logs:CreateLogGroup
+          - logs:CreateLogStream
+          - logs:PutLogEvents
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - s3:Get*
+          - s3:List*
+          Effect: Allow
+          Resource: 
+            - !Sub "${S3Bucket.Arn}"
+            - !Sub "${S3Bucket.Arn}/*"
+      PolicyName: !Join
+        - '-'
+        -  - !Ref 'AWS::StackName'
+           - CodeBuildPolicy
+      Roles:
+      - !Ref 'CodeBuildRole'
+
+  CodeBuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Description: Creating service role in IAM for AWS CodeBuild
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: codebuild.amazonaws.com
+      Path: /
+      RoleName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - CodeBuild
+
+  RoleCodePipeline:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Action:
+          - sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service:
+            - codepipeline.amazonaws.com
+        Version: '2012-10-17'
+      RoleName: !Join
+        - '-'
+        - - !Ref 'AWS::StackName'
+          - CodePipeline
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Resource: !Sub "arn:aws:s3:::${S3Bucket}"
+              Effect: Allow
+              Action:
+              - s3:List*
+              - s3:Get*
+              - s3:Put*
+              - s3:Delete*
+            - Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
+              Effect: Allow
+              Action:
+              - s3:List*
+              - s3:Get*
+              - s3:Put*
+              - s3:Delete*
+            - Resource: "*"
+              Effect: Allow
+              Action:
+              - codebuild:StartBuild
+              - codebuild:batchGetBuilds
+            - Resource: "*"
+              Effect: Allow
+              Action:
+              - logs:Describe*
+              - logs:Create*
+              - logs:Put*
+              - kms:*
+            - Resource: !Sub arn:aws:sns:${AWS::Region}:${AWS::AccountId}:*
+              Effect: Allow
+              Action:
+              - sns:Publish
+
+#S3 Bucket
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      BucketEncryption: 
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'AES256'
+
+#CodePipeline
+  Pipeline:
+    Type: AWS::CodePipeline::Pipeline
+    Properties:
+      Name: !Sub "${AWS::StackName}-Pipeline"
+      RoleArn: !GetAtt RoleCodePipeline.Arn
+      RestartExecutionOnUpdate: false
+      ArtifactStore:
+        Type: S3
+        Location: !Ref S3Bucket
+      Stages:
+      - Name: Source
+        Actions:
+        - Name: Source
+          ActionTypeId:
+            Category: Source
+            Owner: ThirdParty
+            Version: "1"
+            Provider: GitHub
+          Configuration:
+            Owner: "antho-data"
+            Repo: "sandbox-automation"
+            Branch: main
+            OAuthToken: !Ref GitToken
+            PollForSourceChanges: false
+          OutputArtifacts:
+          - Name: Source
+          RunOrder: 1
+      - Name: Execute
+        Actions:
+        - Name: Execute
+          ActionTypeId:
+            Category: Build
+            Owner: AWS
+            Version: "1"
+            Provider: CodeBuild
+          Configuration:
+            ProjectName:
+              Ref: CodeBuildProject
+          InputArtifacts:
+          - Name: Source
+          OutputArtifacts: []
+          RunOrder: 1
+
+#CodeBuild Project
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Artifacts:
+        Type: CODEPIPELINE
+      Description: !Join
+        - ''
+        - - 'CodeBuild Project for '
+          - !Ref 'AWS::StackName'
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:1.0
+        Type: LINUX_CONTAINER
+        EnvironmentVariables:
+          - Name: AWS_FreezeProfileName
+            Value: !Ref AWSFreezeProfileName
+          - Name: AWS_FreezeExecutioRoleArn
+            Value: !GetAtt AwsFreezeRole.Arn
+      Name: !Sub '${AWS::StackName}-CodeBuildProject'
+      ServiceRole: !Ref 'CodeBuildRole'
+      LogsConfig:
+        CloudWatchLogs:
+          Status:  ENABLED
+          GroupName:  !Ref CodeBuildLogGroup
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: |
+          version: 0.2
+          phases:
+            install:
+              commands:
+                - apt-get install -y wget
+                - wget https://github.com/antho-data/freeze-sandbox/archive/refs/tags/v0.1.3-alpha.tar.gz --no-check-certificate
+                - tar xvf v0.1.3-alpha.tar.gz --strip-components=1
+                - chmod +x bin/main
+                - mv bin/main /usr/local/bin/main
+            pre_build:
+              commands:
+                - echo "Setting aws cli config file for role assumption using metadata"
+                - aws configure set profile.$AWS_FreezeProfileName.role_arn $AWS_FreezeExecutioRoleArn
+                - aws configure set profile.$AWS_FreezeProfileName.credential_source "EcsContainer"
+                - export AWS_PROFILE=$AWS_FreezeProfileName
+                - export AWS_DEFAULT_PROFILE=$AWS_FreezeProfileName
+                - export AWS_SDK_LOAD_CONFIG=1
+            build:
+              commands:
+                - ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
+                - echo "Updating AWS Account ID to $ACCOUNT_ID"
+                - echo "Freezing aws resources...."
+                - main
+
+  CodeBuildLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: !Sub ${AWS::StackName}-CodeBuildProject
+      RetentionInDays: !Ref RetentionInDays
+
+Outputs:
+  StackName:
+    Description: 'Stack name'
+    Value: !Sub '${AWS::StackName}'
+  PipelineBucket:
+    Description: 'Pipeline Bucket'
+    Value: !Ref 'S3Bucket'
+  CodePipeline:
+    Description: 'Code Pipeline Console Link'
+    Value: !Sub "https://${AWS::Region}.console.aws.amazon.com/codesuite/codepipeline/pipelines/${Pipeline}/view?region=${AWS::Region}"
