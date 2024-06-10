@@ -356,16 +356,16 @@ Resources:
                     temppath = tempfile.gettempdir()
 
                     # Download and upload files from URLs
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-alerting-service.yaml', "aws-alerting-service.yaml")
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-billing-alert.yml', "aws-billing-alert.yml")
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-freeze-service.yaml', "aws-freeze-service.yaml")
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-wipe-service.yaml', "aws-wipe-service.yaml")
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-user-service.yaml', "aws-user-service.yaml")
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/aws-config-rule.yaml', "aws-config-rule.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-alerting-service.yaml', "aws-alerting-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-billing-alert.yml', "aws-billing-alert.yml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-freeze-service.yaml', "aws-freeze-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-wipe-service.yaml', "aws-wipe-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-user-service.yaml', "aws-user-service.yaml")
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-config-rule.yaml', "aws-config-rule.yaml")
 
                     # Download and upload specific files from the GitHub 'code' directory
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/code/freeze/index_freeze.py', 'code/freeze/index_freeze.py')
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/sandbox-automation/main/code/nuke/index_nuke.py', 'code/nuke/index_nuke.py')
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/code/freeze/index_freeze.py', 'code/freeze/index_freeze.py')
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/code/nuke/index_nuke.py', 'code/nuke/index_nuke.py')
 
                 def update_S3_name(filename):
                     """

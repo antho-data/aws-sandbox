@@ -18,6 +18,7 @@ Parameters:
     Type: String
     Description: Git OAuthToken
     NoEcho: true
+
   AWSFreezeProfileName:
     Description: The name of a CLI Profile to setup in AWS CodeBuild
     Type: String
@@ -308,7 +309,7 @@ Resources:
             Provider: GitHub
           Configuration:
             Owner: "antho-data"
-            Repo: "sandbox-automation"
+            Repo: "aws-sandbox"
             Branch: main
             OAuthToken: !Ref GitToken
             PollForSourceChanges: false
