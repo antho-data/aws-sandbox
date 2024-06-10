@@ -357,7 +357,6 @@ Resources:
 
                     # Download and upload files from URLs
                     upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-alerting-service.yaml', "aws-alerting-service.yaml")
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-billing-alert.yml', "aws-billing-alert.yml")
                     upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-freeze-service.yaml', "aws-freeze-service.yaml")
                     upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-wipe-service.yaml', "aws-wipe-service.yaml")
                     upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-user-service.yaml', "aws-user-service.yaml")
