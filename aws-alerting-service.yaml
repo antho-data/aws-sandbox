@@ -154,6 +154,7 @@ Resources:
       Environment:
         Variables:
           GITHUBToken: !Ref GITHUBToken
+          S3Bucket: !Ref S3BucketName
       Code:
         S3Bucket: !Ref S3BucketName
         S3Key: index_nuke.zip
@@ -177,6 +178,7 @@ Resources:
       Environment:
         Variables:
           GITHUBToken: !Ref GITHUBToken
+          S3Bucket: !Ref S3BucketName
       Code:
         S3Bucket: !Ref S3BucketName
         S3Key: index_freeze.zip
