@@ -363,8 +363,8 @@ Resources:
                     upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/aws-config-rule.yaml', "aws-config-rule.yaml")
 
                     # Download and upload specific files from the GitHub 'code' directory
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/code/freeze/index_freeze.py', 'index_freeze.py')
-                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/code/nuke/index_nuke.py', 'index_nuke.py')
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/code/index_freeze.zip', 'index_freeze.zip')
+                    upload_2_s3('https://raw.githubusercontent.com/antho-data/aws-sandbox/main/code/index_nuke.zip', 'index_nuke.zip')
 
                 def update_S3_name(filename):
                     """
