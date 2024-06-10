@@ -1,0 +1,381 @@
+regions: #Region to target
+- global
+- eu-west-3
+- us-east-1
+
+account-blocklist:
+- 516808433544
+- 972979734155
+- 296403104788
+- 570039516768
+- 705717884493
+- 975050010890
+- 649706809985
+- 311451053930
+
+accounts:
+  455662788869:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  587021421407:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  518551558056:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  707809188586:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  301993232685:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  750989105761:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  745415030782:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  664504370610:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  325681689259:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  885801475464:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  394207436315:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  894426806671:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  285679047437:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  459370960417:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  714562008810:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  098394568588:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  992222228210:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  287662369767:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  203271543287:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  564088821524:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  273911714173:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  809444659662:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  424571028400:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  693023368022:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  962480255828:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  686270819255:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  741374219454:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  539158963566:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  783959563255:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  396624227446:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  149280659679:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  284445534808:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  549706526002:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  925479565843:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  247061933950:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  649706809985:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  398817533003:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  501984417376:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  876626293301:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  666366746205:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  022151831859:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  485883047688:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  477995668264:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  595058326297:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  484497069811:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  881225800936:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  159398445531:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  137893875086:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  486183534890:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  110593547822:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  078612097230:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  700778905650:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  245478336328:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  957507561258:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  870669727545:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  020758989705:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  869136879227:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  655143070346:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  844112306741:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  745854088131:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  969799237091:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  262285483452:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  575977136211:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  744227527309:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  080782735682:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  962316764175:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  566844520118:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  311451053930:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  686307818693:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  154831679986:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  131674823919:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  276555828362:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  173716840086:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  351361044882:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  678668390304:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  296615500438:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  813812644529:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  104045593202:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  757909397068:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  870133160680:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  441131366154:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  081061352126:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  607636516557:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  472454369658:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  354612889163:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  387304473160:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  219832976162:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+
+presets:
+  aws-organizations:
+    filters:
+      IAMRole:
+      - "OrganizationAccountAccessRole"
+    
+  aws-service:
+    filters:
+      IAMRole:
+      - "AWSServiceRoleForOrganizations"
+
+feature-flags:
+  disable-deletion-protection:
+    RDSInstance: true
+    EC2Instance: true
+    CloudformationStack: true
