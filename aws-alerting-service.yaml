@@ -154,7 +154,9 @@ Resources:
       Environment:
         Variables:
           GITHUBToken: !Ref GITHUBToken
-      CodeUri: ./code/nuke
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: code/nuke/index_nuke.zip
   TopicConsumerFunction1Permission:
     Type: 'AWS::Lambda::Permission'
     Properties:
@@ -175,7 +177,9 @@ Resources:
       Environment:
         Variables:
           GITHUBToken: !Ref GITHUBToken
-      CodeUri: ./code/freeze
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: code/freeze/index_freeze.zip
   LambdaFunctionRole:
     Type: AWS::IAM::Role
     Properties:

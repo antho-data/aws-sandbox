@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Execute a CodePipeline/CodeBuild job to freeeze the billing of resources in a given AWS sandbox following a CW billing alert.
+Description: Execute a CodePipeline/CodeBuild job to freeze the billing of resources in a given AWS sandbox following a CW billing alert.
 
 Parameters:
 #  GitUser:
