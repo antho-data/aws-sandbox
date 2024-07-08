@@ -38,6 +38,7 @@ Resources:
       Subscription:
         - Protocol: lambda
           Endpoint: !GetAtt FreezeLambdaFunction.Arn
+
   NukeAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
@@ -47,6 +48,34 @@ Resources:
       Subscription:
         - Protocol: lambda
           Endpoint: !GetAtt NukeLambdaFunction.Arn
+
+  FreezeAlertTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref FreezeAlertTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: budgets.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref FreezeAlertTopic
+
+  NukeAlertTopicPolicy:
+    Type: AWS::SNS::TopicPolicy
+    Properties:
+      Topics:
+        - !Ref NukeAlertTopic
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: budgets.amazonaws.com
+            Action: sns:Publish
+            Resource: !Ref NukeAlertTopic
 
   FreezeLambdaPermission:
     Type: 'AWS::Lambda::Permission'
