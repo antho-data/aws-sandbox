@@ -99,6 +99,9 @@ Resources:
       TreatMissingData: ignore
       Statistic: Maximum
       Threshold: !Ref WarningLevel
+      Tags:
+        - Key: "management"
+          Value: "student"
   BillingNukeAlert:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -116,6 +119,9 @@ Resources:
       TreatMissingData: ignore
       Statistic: Maximum
       Threshold: !Ref CriticalLevel
+      Tags:
+        - Key: "management"
+          Value: "student"
   SnsBudgetAlert:
     Type: AWS::SNS::Topic
     Properties:
