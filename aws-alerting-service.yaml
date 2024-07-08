@@ -22,107 +22,14 @@ Parameters:
   S3BucketName:
     Type: String
     Default: "cf-template-datascientest-sandboxes"
-    Description: Provide a unique name for the S3 Bucket that will contains the Cloudformation templates for the sandbox management.
+    Description: Provide a unique name for the S3 Bucket that will contain the CloudFormation templates for the sandbox management.
   GITHUBToken:
     Type: String
     Default: "*****************"
     Description: Provide a valid GithubToken to fetch templates
 
 Resources:
-  EmailAlert:
-    Type: AWS::SNS::Topic
-    Properties:
-      Subscription:
-        - Endpoint: !Ref EmailStudent
-          Protocol: email
-  EmailTopicPolicy:
-    Type: AWS::SNS::TopicPolicy
-    Properties:
-      PolicyDocument:
-        Statement:
-          - Effect: Allow
-            Principal:
-              Service: budgets.amazonaws.com
-            Action: sns:Publish
-            Resource: !Ref EmailAlert
-      Topics:
-        - !Ref EmailAlert
-  Budget:
-    Type: AWS::Budgets::Budget
-    Properties:
-      NotificationsWithSubscribers:
-        - Subscribers:
-            - SubscriptionType: SNS
-              Address: !Ref EmailAlert
-          Notification:
-            ComparisonOperator: GREATER_THAN
-            NotificationType: ACTUAL
-            Threshold: '25'
-            ThresholdType: PERCENTAGE
-        - Subscribers:
-            - SubscriptionType: SNS
-              Address: !Ref EmailAlert
-          Notification:
-            ComparisonOperator: GREATER_THAN
-            NotificationType: ACTUAL
-            Threshold: '50'
-            ThresholdType: PERCENTAGE
-        - Subscribers:
-            - SubscriptionType: SNS
-              Address: !Ref EmailAlert
-          Notification:
-            ComparisonOperator: GREATER_THAN
-            NotificationType: ACTUAL
-            Threshold: '75'
-            ThresholdType: PERCENTAGE
-      Budget:
-        BudgetName: your-monthly-budget
-        BudgetLimit:
-          Amount: !Ref WarningLevel
-          Unit: USD
-        TimeUnit: MONTHLY
-        BudgetType: COST
-  BillingAlert:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref SnsBudgetAlert
-      AlarmDescription: !Join ["", ["Alert for $", !Ref WarningLevel]]
-      ComparisonOperator: GreaterThanThreshold
-      Dimensions:
-        - Name: Currency
-          Value: USD
-      EvaluationPeriods: 1
-      MetricName: EstimatedCharges
-      Namespace: AWS/Billing
-      Period: 21600
-      TreatMissingData: ignore
-      Statistic: Maximum
-      Threshold: !Ref WarningLevel
-      Tags:
-        - Key: "management"
-          Value: "student"
-  BillingNukeAlert:
-    Type: AWS::CloudWatch::Alarm
-    Properties:
-      AlarmActions:
-        - !Ref NukeTopic
-      AlarmDescription: !Join ["", ["Alert for $", !Ref CriticalLevel]]
-      ComparisonOperator: GreaterThanThreshold
-      Dimensions:
-        - Name: Currency
-          Value: USD
-      EvaluationPeriods: 1
-      MetricName: EstimatedCharges
-      Namespace: AWS/Billing
-      Period: 21600
-      TreatMissingData: ignore
-      Statistic: Maximum
-      Threshold: !Ref CriticalLevel
-      Tags:
-        - Key: "management"
-          Value: "student"
-  SnsBudgetAlert:
+  FreezeAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
       Tags:
@@ -130,8 +37,8 @@ Resources:
           Value: "student"
       Subscription:
         - Protocol: lambda
-          Endpoint: !GetAtt TopicConsumerFunction1.Arn
-  NukeTopic:
+          Endpoint: !GetAtt FreezeLambdaFunction.Arn
+  NukeAlertTopic:
     Type: AWS::SNS::Topic
     Properties:
       Tags:
@@ -139,45 +46,30 @@ Resources:
           Value: "student"
       Subscription:
         - Protocol: lambda
-          Endpoint: !GetAtt TopicConsumerNuke.Arn
-  TopicConsumerNukePermission:
+          Endpoint: !GetAtt NukeLambdaFunction.Arn
+
+  FreezeLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       Action: 'lambda:InvokeFunction'
-      FunctionName: !Ref TopicConsumerNuke
+      FunctionName: !Ref FreezeLambdaFunction
       Principal: sns.amazonaws.com
-  TopicConsumerNuke:
-    Type: 'AWS::Lambda::Function'
-    Properties:
-      Tags:
-        - Key: "management"
-          Value: "student"
-      Handler: index_nuke.handler
-      Role: !GetAtt LambdaFunctionRole.Arn
-      Runtime: python3.9
-      Timeout: 60
-      MemorySize: 2048
-      Environment:
-        Variables:
-          GITHUBToken: !Ref GITHUBToken
-          S3Bucket: !Ref S3BucketName
-      Code:
-        S3Bucket: !Ref S3BucketName
-        S3Key: index_nuke.zip
-  TopicConsumerFunction1Permission:
+
+  NukeLambdaPermission:
     Type: 'AWS::Lambda::Permission'
     Properties:
       Action: 'lambda:InvokeFunction'
-      FunctionName: !Ref TopicConsumerFunction1
+      FunctionName: !Ref NukeLambdaFunction
       Principal: sns.amazonaws.com
-  TopicConsumerFunction1:
+
+  FreezeLambdaFunction:
     Type: 'AWS::Lambda::Function'
     Properties:
       Tags:
         - Key: "management"
           Value: "student"
       Handler: index_freeze.handler
-      Role: !GetAtt LambdaFunctionRole.Arn
+      Role: !GetAtt LambdaExecutionRole.Arn
       Runtime: python3.9
       Timeout: 60
       MemorySize: 2048
@@ -188,7 +80,27 @@ Resources:
       Code:
         S3Bucket: !Ref S3BucketName
         S3Key: index_freeze.zip
-  LambdaFunctionRole:
+
+  NukeLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Tags:
+        - Key: "management"
+          Value: "student"
+      Handler: index_nuke.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: python3.9
+      Timeout: 60
+      MemorySize: 2048
+      Environment:
+        Variables:
+          GITHUBToken: !Ref GITHUBToken
+          S3Bucket: !Ref S3BucketName
+      Code:
+        S3Bucket: !Ref S3BucketName
+        S3Key: index_nuke.zip
+
+  LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
       Tags:
@@ -225,32 +137,88 @@ Resources:
                   - 'sns:Receive'
                   - 'sns:Unsubscribe'
                 Resource: "*"
-  BillingEmailAlertTopic:
-    Type: AWS::SNS::Topic
+
+  Budget:
+    Type: AWS::Budgets::Budget
     Properties:
-      Tags:
+      Budget:
+        BudgetLimit:
+          Amount: !Ref WarningLevel
+          Unit: USD
+        TimeUnit: MONTHLY
+        BudgetType: COST
+      NotificationsWithSubscribers:
+        # Alerts for student only
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 25
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref EmailStudent
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 50
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref EmailStudent
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: 75
+            ThresholdType: PERCENTAGE
+          Subscribers:
+            - SubscriptionType: EMAIL
+              Address: !Ref EmailStudent
+        # Alerts for admin and student for WarningLevel
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: !Ref WarningLevel
+            ThresholdType: ABSOLUTE_VALUE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref FreezeAlertTopic
+            - SubscriptionType: EMAIL
+              Address: !Ref Email
+            - SubscriptionType: EMAIL
+              Address: !Ref EmailStudent
+        # Alerts for admin and student for CriticalLevel
+        - Notification:
+            ComparisonOperator: GREATER_THAN
+            NotificationType: ACTUAL
+            Threshold: !Ref CriticalLevel
+            ThresholdType: ABSOLUTE_VALUE
+          Subscribers:
+            - SubscriptionType: SNS
+              Address: !Ref NukeAlertTopic
+            - SubscriptionType: EMAIL
+              Address: !Ref Email
+            - SubscriptionType: EMAIL
+              Address: !Ref EmailStudent
+      ResourceTags:
         - Key: "management"
           Value: "student"
-  AlarmSubscriberAdminEmail:
-    Type: AWS::SNS::Subscription
-    Properties:
-      Endpoint: !Ref Email
-      Protocol: email
-      TopicArn: !Ref BillingEmailAlertTopic
-  AlarmSubscriberStudentEmail:
-    Type: AWS::SNS::Subscription
-    Properties:
-      Endpoint: !Ref EmailStudent
-      Protocol: email
-      TopicArn: !Ref BillingEmailAlertTopic
 
 Outputs:
-  TopicConsumerFunction1Name:
-    Description: TopicConsumerFunction1 function name
-    Value: !Ref TopicConsumerFunction1
-  SNStopicName:
-    Description: SNS topic name
-    Value: !GetAtt SnsBudgetAlert.TopicName
-  SNStopicARN:
-    Description: SNS topic ARN
-    Value: !Ref SnsBudgetAlert
+  FreezeLambdaFunctionName:
+    Description: FreezeLambdaFunction function name
+    Value: !Ref FreezeLambdaFunction
+  FreezeAlertTopicName:
+    Description: Freeze SNS topic name
+    Value: !GetAtt FreezeAlertTopic.TopicName
+  FreezeAlertTopicARN:
+    Description: Freeze SNS topic ARN
+    Value: !Ref FreezeAlertTopic
+  NukeLambdaFunctionName:
+    Description: NukeLambdaFunction function name
+    Value: !Ref NukeLambdaFunction
+  NukeAlertTopicName:
+    Description: Nuke SNS topic name
+    Value: !GetAtt NukeAlertTopic.TopicName
+  NukeAlertTopicARN:
+    Description: Nuke SNS topic ARN
+    Value: !Ref NukeAlertTopic
