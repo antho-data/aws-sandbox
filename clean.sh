@@ -109,7 +109,7 @@ main() {
   read -s -n 30 -p "Do you want to proceed?"
 
   # Check for KMS keys
-  check_kms_keys
+#  check_kms_keys
 
   # Destroy resources
   destroy_resources

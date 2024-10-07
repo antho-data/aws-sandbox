@@ -22,6 +22,14 @@ accounts:
     presets:
       - "aws-organizations"
       - "aws-service"
+  886436947533:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
+  122610513153:
+    presets:
+      - "aws-organizations"
+      - "aws-service"
   518551558056:
     presets:
       - "aws-organizations"
@@ -182,10 +190,6 @@ accounts:
     presets:
       - "aws-organizations"
       - "aws-service"
-  477995668264:
-    presets:
-      - "aws-organizations"
-      - "aws-service"
   595058326297:
     presets:
       - "aws-organizations"
@@ -295,10 +299,6 @@ accounts:
       - "aws-organizations"
       - "aws-service"
   131674823919:
-    presets:
-      - "aws-organizations"
-      - "aws-service"
-  276555828362:
     presets:
       - "aws-organizations"
       - "aws-service"
