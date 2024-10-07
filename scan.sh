@@ -33,6 +33,19 @@ else
     echo "No profile specified, running in automatic mode."
 fi
 
+# Fonction pour afficher la dernière connexion des utilisateurs IAM
+check_user_last_login() {
+    users=$(aws iam list-users --query 'Users[*].UserName' --output text)
+    for user in $users; do
+        last_login=$(aws iam get-user --user-name "$user" --query 'User.PasswordLastUsed' --output text 2>/dev/null)
+        if [ "$last_login" != "None" ]; then
+            echo "User $user last login: $last_login"
+        else
+            echo "User $user has never logged into the console."
+        fi
+    done
+}
+
 # Fonction pour vérifier un profil donné
 check_profile() {
     student=$1
@@ -51,11 +64,15 @@ check_profile() {
             actual_cost=$(echo $cost | jq -r '.ResultsByTime[0].Total.UnblendedCost.Amount')
             echo "Actual cost for $student: $actual_cost"
 
+            # Vérifier les clés KMS
             if check_kms_keys; then
                 echo "Profile $student has IAM user and CMK found."
             else
                 echo "Profile $student has IAM user but no CMK found."
             fi
+
+            # Vérifier la dernière connexion des utilisateurs IAM
+            check_user_last_login
         else
             echo "No IAM users found on $student."
         fi

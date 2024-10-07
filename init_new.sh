@@ -92,10 +92,10 @@ read -r -p  "[*] Enter the datascientest admin email to notify (Default value: d
 email_datascientest="${email_datascientest_input:=dst-student@datascientest.com}"
 
 read -r -p  "[*] Enter a valid Github token (Default account already provided): " GITHUBToken_input
-GITHUBToken="${GITHUBToken_input:=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}"
+GITHUBToken="${GITHUBToken_input:=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}"
 
 read -r -p  "[*] Enter a valid password for the admin app token (Default token already provided): " gmail_password_input
-gmail_password="${gmail_password_input:=lxydrdicqxdwmdrh}"
+gmail_password="${gmail_password_input:=ffxmvdccrhwckbsg}"
 
 userpass=$(pwgen -1 14)
 
