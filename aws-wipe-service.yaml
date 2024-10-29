@@ -25,7 +25,7 @@ Parameters:
   AWSNukeVersionNumber:
     Description: The version number of an aws-nuke available release to download
     Type: String
-    Default: "2.25.0"
+    Default: "3.29.1"
     
   AWSNukeConfigFile:
     Description: The directory path to the config file used by aws-nuke
@@ -393,7 +393,7 @@ Resources:
               commands:
                 - export AWS_NUKE_VERSION=$AWS_NukeVersion
                 - apt-get install -y wget
-                - wget https://github.com/rebuy-de/aws-nuke/releases/download/v$AWS_NUKE_VERSION/aws-nuke-v$AWS_NUKE_VERSION-linux-amd64.tar.gz --no-check-certificate
+                - wget https://github.com/ekristen/aws-nuke/releases/download/v$AWS_NUKE_VERSION/aws-nuke-v$AWS_NUKE_VERSION-linux-amd64.tar.gz --no-check-certificate
                 - tar xvf aws-nuke-v$AWS_NUKE_VERSION-linux-amd64.tar.gz
                 - chmod +x aws-nuke-v$AWS_NUKE_VERSION-linux-amd64
                 - mv aws-nuke-v$AWS_NUKE_VERSION-linux-amd64 /usr/local/bin/aws-nuke
